@@ -4,7 +4,7 @@ import TrackWorkout from '../components/DashBoardComponents/WorkoutTracker.jsx';
 import TrackEating from '../components/DashBoardComponents/EatingTracker.jsx';
 import AIFitnessCoach from '../components/DashBoardComponents/AIFitnessCoach.jsx';
 
-function App() {
+function Dashboard() {
   const [activeTab, setActiveTab] = useState('Track Workout');
 
   const handleTabChange = (tab) => {
@@ -12,16 +12,16 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen max-width-6xl">
       <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
       <main className="flex-1 overflow-x-hidden overflow-y-auto">
-        {activeTab === 'Track Workout' && <TrackWorkout />}
-        {activeTab === 'Track Eating' && <TrackEating />}
+        {activeTab === 'Log Workout' && <TrackWorkout />}
+        {activeTab === 'Log Eating' && <TrackEating />}
         {activeTab === 'AI Fitness Coach' && <AIFitnessCoach />}
       </main>
     </div>
   );
 }
 
-export default App;
+export default Dashboard;

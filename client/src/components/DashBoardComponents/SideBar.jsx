@@ -1,8 +1,22 @@
-import { useState } from 'react';
+import  { useState } from 'react';
 import PropTypes from 'prop-types';
+import AICoachIcon from '../../assets/DashboardIcons/ai.png';
+import EatingLogIcon from '../../assets/DashboardIcons/salad.png';
+import WorkoutLogIcon from '../../assets/DashboardIcons/weightlifting.png';
 
 const Sidebar = ({ activeTab, onTabChange }) => {
-  const tabs = ['Track Workout', 'Track Eating', 'AI Fitness Coach'];
+  const icons = {
+    'Log Workout': WorkoutLogIcon,
+    'Log Eating': EatingLogIcon,
+    'AI Fitness Coach': AICoachIcon,
+  };
+
+  const descriptions = {
+    'Log Workout': 'Workout Log',
+    'Log Eating': 'Meal Tracker',
+    'AI Fitness Coach': 'FitFlow Coach',
+  };
+
   const [isSidebarExpanded, setSidebarExpanded] = useState(false);
 
   const handleTabHover = () => {
@@ -14,27 +28,39 @@ const Sidebar = ({ activeTab, onTabChange }) => {
   };
 
   return (
+    <div    
+    onMouseEnter={handleTabHover}
+    onMouseLeave={handleTabLeave} >
     <nav
-      className={`bg-gray-300 transition-all duration-300 ${
+      className={`bg-gray-100 rounded-lg transition-all duration-300 ${
         isSidebarExpanded ? 'w-48' : 'w-24'
-      } h-screen`}
+      } h-screen overflow-x-hidden`}
     >
-      <div className="flex flex-col items-center py-4">
-        {tabs.map((tab) => (
+      <div className="flex flex-col py-10">
+        {Object.keys(icons).map((tab) => (
           <button
             key={tab}
-            className={`text-black p-2 mb-2 focus:outline-none ${
+            className={`text-black font-bold p-2 mb-2 focus:outline-none ${
               activeTab === tab ? 'text-white' : ''
             }`}
-            onMouseEnter={handleTabHover}
-            onMouseLeave={handleTabLeave}
+     
             onClick={() => onTabChange(tab)}
           >
-            <span className="hover:overflow-visible">{tab}</span>
+            <div className="flex items-center">
+              <img
+                src={icons[tab]}
+                alt={tab}
+                className={`mr-2 ml-2 mb-10 flex items-left ${isSidebarExpanded ? 'w-10 h-10' : 'w-12 h-12'}`}
+              />
+              <span className={`mb-10 text-sm ${isSidebarExpanded ? 'visible' : 'invisible'}`}>
+                {descriptions[tab]}
+              </span>
+            </div>
           </button>
         ))}
       </div>
     </nav>
+    </div>
   );
 };
 
