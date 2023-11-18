@@ -30,11 +30,10 @@ type User struct {
 }
 
 func main() {
-	// Build connection string
-	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;",
-		server, user, password, port, database)
+
+	connString := getConnectionString()
 	var err error
-	// Create connection pool
+
 	db, err = sql.Open("sqlserver", connString)
 	if err != nil {
 		log.Fatal("Error creating connection pool: ", err.Error())
@@ -44,54 +43,26 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Connected!/n")
+	fmt.Printf("Connected!")
 
-	// Use the cors middleware to enable CORS
+
 	c := cors.Default()
-
-	// Create a new HTTP handler with the cors middleware
 	handler := c.Handler(http.DefaultServeMux)
 
 	// Register the "/register" route
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login", loginHandler)
 
-	/*
-	users, err := getUsers()
-	if err != nil {
-		log.Fatal("Failed to get users: ", err)
-	}
 
-	for _, user := range users {
-		fmt.Printf("UserID: %d, Username: %s\n", user.UserID, user.Name)
-	}
-	*/
-
-	// Start the HTTP server
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }
 
-/*
-func createUserTable() error {
-	// SQL statement to create User table
-	query := `
-		CREATE TABLE [User] (
-			UserID INT PRIMARY KEY IDENTITY(1,1),
-			Name NVARCHAR(255),
-			Password NVARCHAR(255)
-		);
-	`
-
-	// Execute the query
-	_, err := db.ExecContext(context.Background(), query)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("User table created successfully!")
-	return nil
+func getConnectionString() string {
+	return fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;",
+		server, user, password, port, database)
 }
-*/
 
+//REGISTER HANDLER
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the request body
 	var registrationData struct {
@@ -115,20 +86,69 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+
+ //INSERT USER FUNCTION
 func insertUser(email, password string) error {
 	// SQL statement to insert user into the User table
 	query := `
-		INSERT INTO [User] (Name, Password)
+		INSERT INTO "User" (Name, Password)
 		VALUES ('` + email + `', '` + password + `');
 	`
 
 	// Execute the query
-	_, err := db.ExecContext(context.Background(), query, email, password)
+	_, err := db.ExecContext(context.Background(), query)
 	return err
 }
 
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+    // Parse the request body
+    var loginData struct {
+        Email    string `json:"email"`
+        Password string `json:"password"`
+    }
+
+    if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    _, err := loginUser(loginData.Email, loginData.Password)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusUnauthorized)
+        return
+    }
+
+    // Send a success response
+    w.WriteHeader(http.StatusOK)
+}
+
+func loginUser(email, password string) (*User, error) {
+    // SQL statement to select user by email
+    query := `
+        SELECT UserID, Name, Password FROM [User]
+        WHERE Name = @name;
+    `
+
+    // Execute the query
+    var user User
+    err := db.QueryRowContext(context.Background(), query, sql.Named("name", email)).
+        Scan(&user.UserID, &user.Name, &user.Password)
+
+    if err == sql.ErrNoRows {
+        return nil, fmt.Errorf("User does not exist. Please register.")
+    } else if err != nil {
+        return nil, err
+    }
+
+ 
+    if user.Password != password {
+        return nil, fmt.Errorf("Invalid password")
+    }
+
+    return &user, nil
+}
+
 func getUsers() ([]User, error) {
-	// SQL statement to select only Name and Password columns
 	query := `
 		SELECT UserID, Name, Password FROM [User];
 	`
@@ -139,7 +159,6 @@ func getUsers() ([]User, error) {
 	}
 	defer rows.Close()
 
-	// Iterate over the rows and scan the data into a User struct
 	var users []User
 	for rows.Next() {
 		var user User
@@ -152,3 +171,5 @@ func getUsers() ([]User, error) {
 
 	return users, nil
 }
+
+

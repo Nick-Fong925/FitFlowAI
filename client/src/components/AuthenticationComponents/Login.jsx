@@ -21,7 +21,8 @@ function Login() {
   
       if (response.ok) {
         alert("Login successful!");
-        // Redirect or perform other actions for successful login
+        window.location.href = "/Dashboard";
+        
       } else {
         const errorText = await response.text();
         alert(`Login failed: ${errorText}`);
