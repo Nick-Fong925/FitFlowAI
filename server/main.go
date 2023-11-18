@@ -23,6 +23,12 @@ var user = "Nick"
 var password = "19701120Nfong!"
 var database = "FitFlowAI User"
 
+type User struct {
+	UserID   int
+	Name     string
+	Password string
+}
+
 func main() {
 	// Build connection string
 	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;",
@@ -38,14 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	fmt.Printf("Connected!")
-
-	/*
-	err = createUserTable()
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	*/
+	fmt.Printf("Connected!/n")
 
 	// Use the cors middleware to enable CORS
 	c := cors.Default()
@@ -55,6 +54,17 @@ func main() {
 
 	// Register the "/register" route
 	http.HandleFunc("/register", registerHandler)
+
+	/*
+	users, err := getUsers()
+	if err != nil {
+		log.Fatal("Failed to get users: ", err)
+	}
+
+	for _, user := range users {
+		fmt.Printf("UserID: %d, Username: %s\n", user.UserID, user.Name)
+	}
+	*/
 
 	// Start the HTTP server
 	log.Fatal(http.ListenAndServe(":8080", handler))
@@ -109,7 +119,7 @@ func insertUser(email, password string) error {
 	// SQL statement to insert user into the User table
 	query := `
 		INSERT INTO [User] (Name, Password)
-		VALUES ($1, $2);
+		VALUES ('` + email + `', '` + password + `');
 	`
 
 	// Execute the query
@@ -117,3 +127,28 @@ func insertUser(email, password string) error {
 	return err
 }
 
+func getUsers() ([]User, error) {
+	// SQL statement to select only Name and Password columns
+	query := `
+		SELECT UserID, Name, Password FROM [User];
+	`
+
+	rows, err := db.QueryContext(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Iterate over the rows and scan the data into a User struct
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(&user.UserID, &user.Name, &user.Password)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
