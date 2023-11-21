@@ -45,6 +45,19 @@ func main() {
 	}
 	fmt.Printf("Connected!")
 
+	/*
+	err = createWorkoutLogsTable()
+	if err != nil {
+		fmt.Println("Error creating WorkoutLogs table:", err)
+		return
+	}
+
+	err = createWorkoutEntriesTable()
+	if err != nil {
+		fmt.Println("Error creating WorkoutEntries table:", err)
+		return
+	}
+	*/
 
 	c := cors.Default()
 	handler := c.Handler(http.DefaultServeMux)
@@ -52,6 +65,7 @@ func main() {
 	// Register the "/register" route
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/saveWorkoutLog", saveWorkoutLogHandler)
 
 
 	log.Fatal(http.ListenAndServe(":8080", handler))
@@ -172,4 +186,28 @@ func getUsers() ([]User, error) {
 	return users, nil
 }
 
+func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
+    var workoutLog struct {
+        UserID  int `json:"userID"`
+        Date    string `json:"date"`
+        Entries []struct {
+            Exercise string `json:"exercise"`
+            Sets     int    `json:"sets"`
+            Reps     int    `json:"reps"`
+            Weight   int    `json:"weight"`
+        } `json:"entries"`
+    }
+
+    if err := json.NewDecoder(r.Body).Decode(&workoutLog); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    // Log that the request was received
+    fmt.Println("Received workout log request:", workoutLog)
+
+    // Your existing logic to save workout log to the database
+
+    w.WriteHeader(http.StatusOK)
+}
 

@@ -1,8 +1,13 @@
 import  { useState } from 'react';
+import axios from 'axios';
 
 const TrackWorkout = () => {
-  const [workoutLogs, setWorkoutLogs] = useState([]);
+
+  
+  const [errorMessage, setErrorMessage] = useState('');
+  
   const [currentLog, setCurrentLog] = useState({
+    userID: 10, //UPDATE TO ACTUAL USER ID AFTER USER AUTH CREATED 
     date: new Date().toLocaleDateString(),
     entries: [],
   });
@@ -13,32 +18,50 @@ const TrackWorkout = () => {
     weight: 0,
   });
 
-  const addWorkoutLog = () => {
-    setWorkoutLogs([...workoutLogs, currentLog]);
-    setCurrentLog({
-      date: new Date().toLocaleDateString(),
-      entries: [],
-    });
-    setNewEntry({
-      exercise: '',
-      sets: 0,
-      reps: 0,
-      weight: 0,
-    });
-  };
 
   const addWorkoutEntry = () => {
-    setCurrentLog({
-      ...currentLog,
-      entries: [...currentLog.entries, newEntry],
-    });
-    setNewEntry({
-      exercise: '',
-      sets: 0,
-      reps: 0,
-      weight: 0,
-    });
+    // Check if the exercise is not an empty string before adding the entry
+    if (newEntry.exercise.trim() !== '') {
+      setCurrentLog({
+        ...currentLog,
+        entries: [...currentLog.entries, newEntry],
+      });
+      setNewEntry({
+        exercise: '',
+        sets: 0,
+        reps: 0,
+        weight: 0,
+      });
+      setErrorMessage(''); 
+    } else {
+ 
+      setErrorMessage('Please enter a valid exercise.');
+    }
   };
+
+  
+  const SaveWorkoutLog = async () => {
+    try {
+      await axios.post('http://localhost:8080/saveWorkoutLog', currentLog);
+
+      setCurrentLog({
+        userID: 10, // Replace with the actual user ID
+        date: new Date().toLocaleDateString(),
+        entries: [],
+      });
+      setNewEntry({
+        exercise: '',
+        sets: 0,
+        reps: 0,
+        weight: 0,
+      });
+
+    } catch (error) {
+      console.error('Error saving workout log:', error);
+    
+    }
+  };
+
 
   return (
     <div className="p-4">
@@ -54,32 +77,43 @@ const TrackWorkout = () => {
           className="border p-2 w-full"
         />
       </div>
+      <div className="mb-4 text-red-500">{errorMessage}</div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">Sets:</label>
         <input
-          type="number"
+          type="text"
           value={newEntry.sets}
-          onChange={(e) => setNewEntry({ ...newEntry, sets: parseInt(e.target.value) })}
+          onChange={(e) => {
+            const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
+            setNewEntry({ ...newEntry, sets: parsedValue });
+          }}
           className="border p-2 w-full"
         />
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">Reps:</label>
         <input
-          type="number"
+          type="text"
           value={newEntry.reps}
-          onChange={(e) => setNewEntry({ ...newEntry, reps: parseInt(e.target.value) })}
+          onChange={(e) => {
+            const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
+            setNewEntry({ ...newEntry, reps: parsedValue });
+          }}
           className="border p-2 w-full"
         />
+
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">Weight (lbs):</label>
-        <input
-          type="number"
-          value={newEntry.weight}
-          onChange={(e) => setNewEntry({ ...newEntry, weight: parseInt(e.target.value) })}
-          className="border p-2 w-full"
-        />
+    <input
+        type="text"
+        value={newEntry.weight}
+        onChange={(e) => {
+          const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
+          setNewEntry({ ...newEntry, weight: parsedValue });
+        }}
+        className="border p-2 w-full"
+      />
       </div>
       <button
         onClick={addWorkoutEntry}
@@ -101,23 +135,12 @@ const TrackWorkout = () => {
       </div>
 
       <button
-        onClick={addWorkoutLog}
+        onClick={SaveWorkoutLog}
         className="mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
       >
         Save Workout Log
       </button>
-
-      {/* Display all workout logs */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">All Workout Logs</h2>
-        <ul>
-          {workoutLogs.map((log, index) => (
-            <li key={index}>
-              {log.date} - {log.entries.length} entries
-            </li>
-          ))}
-        </ul>
-      </div>
+  
     </div>
   );
 };

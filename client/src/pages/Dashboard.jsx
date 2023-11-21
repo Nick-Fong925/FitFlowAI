@@ -5,7 +5,7 @@ import TrackEating from '../components/DashBoardComponents/EatingTracker.jsx';
 import AIFitnessCoach from '../components/DashBoardComponents/AIFitnessCoach.jsx';
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('Track Workout');
+  const [activeTab, setActiveTab] = useState('Log Workout');
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);

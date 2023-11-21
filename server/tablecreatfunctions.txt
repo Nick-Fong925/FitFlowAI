@@ -1,0 +1,81 @@
+// Funcion to creatUserTable in Azure DataBase
+func createUserTable() error {
+	// SQL statement to create User table
+	query := `
+		CREATE TABLE [User] (
+			UserID INT PRIMARY KEY IDENTITY(1,1),
+			Name NVARCHAR(255),
+			Password NVARCHAR(255)
+		);
+	`
+	// Execute the query
+	_, err := db.ExecContext(context.Background(), query)
+	if err != nil {
+		return err
+	}
+	fmt.Println("User table created successfully!")
+	return nil
+}
+
+//Function to createWorkoutTable in Azure DataBase
+func createWorkoutLogsTable() error {
+	// SQL statement to create WorkoutLogs table
+	query := `
+		CREATE TABLE WorkoutLogs (
+			LogID INT PRIMARY KEY IDENTITY(1,1),
+			UserID INT FOREIGN KEY REFERENCES [User](UserID),
+			Date DATE
+		);
+	`
+	// Execute the query
+	_, err := db.ExecContext(context.Background(), query)
+	if err != nil {
+		return err
+	}
+	fmt.Println("WorkoutLogs table created successfully!")
+	return nil
+}
+
+// Function to create WorkoutEntries table in Azure SQL Database
+func createWorkoutEntriesTable() error {
+	// SQL statement to create WorkoutEntries table
+	query := `
+		CREATE TABLE WorkoutEntries (
+			EntryID INT PRIMARY KEY IDENTITY(1,1),
+			LogID INT FOREIGN KEY REFERENCES WorkoutLogs(LogID),
+			Exercise NVARCHAR(255),
+			Sets INT,
+			Reps INT,
+			Weight INT
+		);
+	`
+	// Execute the query
+	_, err := db.ExecContext(context.Background(), query)
+	if err != nil {
+		return err
+	}
+	fmt.Println("WorkoutEntries table created successfully!")
+	return nil
+}
+
+
+//Alter Table Function
+func alterDatabaseSchema() error {
+	// SQL statement to add a unique constraint to the "Name" column
+	query := `
+		IF NOT EXISTS (
+			SELECT 1
+			FROM sys.indexes
+			WHERE name = 'UQ_UserName'
+			AND object_id = OBJECT_ID('User')
+		)
+		BEGIN
+			CREATE UNIQUE INDEX UQ_UserName ON [User] (Name);
+		END;
+	`
+
+	// Execute the query
+	_, err := db.ExecContext(context.Background(), query)
+	return err
+}
+
