@@ -14,6 +14,8 @@ import (
 	_ "github.com/microsoft/go-mssqldb"
 	"github.com/rs/cors"
 	"context"
+	"io/ioutil"
+	"bytes"
 )
 
 var db *sql.DB
@@ -27,6 +29,17 @@ type User struct {
 	UserID   int
 	Name     string
 	Password string
+}
+
+type WorkoutLog struct {
+	UserID  int `json:"userID"`
+	Date    string `json:"date"`
+	Entries []struct {
+		Exercise string `json:"exercise"`
+		Sets     int    `json:"sets"`
+		Reps     int    `json:"reps"`
+		Weight   int    `json:"weight"`
+	} `json:"entries"`
 }
 
 func main() {
@@ -58,6 +71,7 @@ func main() {
 		return
 	}
 	*/
+
 
 	c := cors.Default()
 	handler := c.Handler(http.DefaultServeMux)
@@ -186,28 +200,67 @@ func getUsers() ([]User, error) {
 	return users, nil
 }
 
-func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
-    var workoutLog struct {
-        UserID  int `json:"userID"`
-        Date    string `json:"date"`
-        Entries []struct {
-            Exercise string `json:"exercise"`
-            Sets     int    `json:"sets"`
-            Reps     int    `json:"reps"`
-            Weight   int    `json:"weight"`
-        } `json:"entries"`
-    }
+func insertWorkoutLog(workoutLog WorkoutLog) error {
+	// Insert workout log
+	logQuery := `
+		INSERT INTO WorkoutLogs (UserID, Date)
+		VALUES (@UserID, @Date)
+		RETURNING LogID;
+	`
 
-    if err := json.NewDecoder(r.Body).Decode(&workoutLog); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
-    }
+	var logID int
+	err := db.QueryRowContext(context.Background(), logQuery, sql.Named("UserID", workoutLog.UserID), sql.Named("Date", workoutLog.Date)).Scan(&logID)
+	if err != nil {
+		return fmt.Errorf("Error inserting workout log: %v", err)
+	}
 
-    // Log that the request was received
-    fmt.Println("Received workout log request:", workoutLog)
+	// Insert workout log entries
+	entryQuery := `
+		INSERT INTO WorkoutLogEntries (LogID, Exercise, Sets, Reps, Weight)
+		VALUES (@LogID, @Exercise, @Sets, @Reps, @Weight);
+	`
+	for _, entry := range workoutLog.Entries {
+		_, err := db.ExecContext(context.Background(), entryQuery,
+			sql.Named("LogID", logID),
+			sql.Named("Exercise", entry.Exercise),
+			sql.Named("Sets", entry.Sets),
+			sql.Named("Reps", entry.Reps),
+			sql.Named("Weight", entry.Weight),
+		)
+		if err != nil {
+			return fmt.Errorf("Error inserting workout log entry: %v", err)
+		}
+	}
 
-    // Your existing logic to save workout log to the database
-
-    w.WriteHeader(http.StatusOK)
+	return nil
 }
 
+func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
+	// Read the request body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	// Log the received request body
+	fmt.Println("Received workout log request body:", string(body))
+
+	// Create a new reader with the body content
+	bodyReader := bytes.NewReader(body)
+
+	// Decode the request body
+	var workoutLog WorkoutLog
+	if err := json.NewDecoder(bodyReader).Decode(&workoutLog); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Insert the workout log into the database
+	if err := insertWorkoutLog(workoutLog); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

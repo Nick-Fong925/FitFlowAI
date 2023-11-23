@@ -11,7 +11,11 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Router>
     <React.StrictMode>
+    <div className="flex items-center justify-center">
+    <div className="max-w-6xl">
       <Header/>
+      </div>
+      </div>
       <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/Login" element={<Login />} />
