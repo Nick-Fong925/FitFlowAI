@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+//API Key for OpenAI: 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
+
 const TrackEating = () => {
   const [mealLogs, setMealLogs] = useState([]);
   const [currentMeal, setCurrentMeal] = useState({
@@ -36,6 +38,8 @@ const TrackEating = () => {
       calories: 0,
     });
   };
+  
+ 
 
   return (
     <div className="p-4">

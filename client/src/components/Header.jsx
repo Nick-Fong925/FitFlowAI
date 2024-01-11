@@ -3,18 +3,18 @@ import { Link } from "react-router-dom";
 
 function Header() {
   return (
-    <header className="bg-white py-7 max-w-6xl mx-auto">
-      <nav className="container mx-auto flex items-center justify-between flex-1">
+    <header className="bg-white py-7 flex items-center">
+      <nav className="container mx-auto flex items-center flex-1 ml-10 mr-10">
         <Link to="/">
-          <img src={FitFlow} alt="logo" className="h-16" />
+          <img src={FitFlow} alt="logo" className="h-12 md:h-14 lg:h-16" />
         </Link>
         <ul className="flex space-x-4">
           <li>
             <Link
-              className="text-black font-bold hover:text-gray-200"
+              className="text-black font-bold hover:text-gray-200 mr-10 md:text-2xl"
               to="/login"
             >
-              LOGIN
+              Login
             </Link>
           </li>
         </ul>
