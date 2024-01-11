@@ -32,15 +32,19 @@ type User struct {
 }
 
 type WorkoutLog struct {
-	UserID  int `json:"userID"`
-	Date    string `json:"date"`
-	Entries []struct {
-		Exercise string `json:"exercise"`
-		Sets     int    `json:"sets"`
-		Reps     int    `json:"reps"`
-		Weight   int    `json:"weight"`
-	} `json:"entries"`
+	UserID  int       `json:"userID"`
+	Date    string    `json:"date"`
+	Entries []Entry   `json:"entries"`
 }
+
+
+type Entry struct {
+	Exercise string `json:"exercise"`
+	Sets     int    `json:"sets"`
+	Reps     int    `json:"reps"`
+	Weight   int    `json:"weight"`
+}
+
 
 func main() {
 
@@ -200,65 +204,73 @@ func getUsers() ([]User, error) {
 	return users, nil
 }
 
-func insertWorkoutLog(workoutLog WorkoutLog) error {
-	// Insert workout log
-	logQuery := `
-		INSERT INTO WorkoutLogs (UserID, Date)
-		VALUES (@UserID, @Date)
-		RETURNING LogID;
-	`
-
-	var logID int
-	err := db.QueryRowContext(context.Background(), logQuery, sql.Named("UserID", workoutLog.UserID), sql.Named("Date", workoutLog.Date)).Scan(&logID)
+func insertWorkoutLog(log WorkoutLog) error {
+	// Begin a transaction
+	tx, err := db.BeginTx(context.Background(), nil)
 	if err != nil {
-		return fmt.Errorf("Error inserting workout log: %v", err)
+		return err
+	}
+	defer tx.Rollback()
+
+
+	result, err := tx.ExecContext(context.Background(), fmt.Sprintf(`
+	INSERT INTO WorkoutLogs (UserID, Date)
+	VALUES (%d, '%s')
+	`, log.UserID, log.Date))
+	if err != nil {
+		log.Println("Error inserting into WorkoutLogs table:", err)
+		return err
 	}
 
-	// Insert workout log entries
-	entryQuery := `
-		INSERT INTO WorkoutLogEntries (LogID, Exercise, Sets, Reps, Weight)
-		VALUES (@LogID, @Exercise, @Sets, @Reps, @Weight);
-	`
-	for _, entry := range workoutLog.Entries {
-		_, err := db.ExecContext(context.Background(), entryQuery,
-			sql.Named("LogID", logID),
-			sql.Named("Exercise", entry.Exercise),
-			sql.Named("Sets", entry.Sets),
-			sql.Named("Reps", entry.Reps),
-			sql.Named("Weight", entry.Weight),
-		)
+
+
+	logID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	for _, entry := range log.Entries {
+		_, err := tx.ExecContext(context.Background(), fmt.Sprintf(`
+			INSERT INTO WorkoutEntries (LogID, Exercise, Sets, Reps, Weight)
+			VALUES (%d, '%s', %d, %d, %d)
+		`, logID, entry.Exercise, entry.Sets, entry.Reps, entry.Weight))
 		if err != nil {
-			return fmt.Errorf("Error inserting workout log entry: %v", err)
+			return err
 		}
 	}
 
+
+	if err := tx.Commit(); err != nil {
+		fmt.Println("Error committing transaction:", err)
+		return err
+	}
+
+	fmt.Println("Workout log inserted successfully!")
 	return nil
 }
 
 func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
-	// Read the request body
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
 
-	// Log the received request body
+
 	fmt.Println("Received workout log request body:", string(body))
 
-	// Create a new reader with the body content
+
 	bodyReader := bytes.NewReader(body)
 
-	// Decode the request body
 	var workoutLog WorkoutLog
 	if err := json.NewDecoder(bodyReader).Decode(&workoutLog); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Insert the workout log into the database
+
 	if err := insertWorkoutLog(workoutLog); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error inserting workout log into the database", http.StatusInternalServerError)
 		return
 	}
 

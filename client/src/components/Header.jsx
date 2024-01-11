@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 
 function Header() {
   return (
-    <header className="bg-white py-7">
-      <nav className="container mx-auto flex items-center flex-1 ml-10 mr-">
+    <header className="bg-white py-7 flex items-center">
+      <nav className="container mx-auto flex items-center flex-1 ml-10 mr-10">
         <Link to="/">
           <img src={FitFlow} alt="logo" className="h-12 md:h-14 lg:h-16" />
         </Link>
