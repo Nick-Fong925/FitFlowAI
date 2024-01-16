@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const ChatGPTComponent = () => {
+const RecipeGenerator = () => {
   const [calories, setCalories] = useState('');
   const [messages, setMessages] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -273,4 +273,4 @@ const ChatGPTComponent = () => {
   );
 };
 
-export default ChatGPTComponent;
+export default RecipeGenerator;

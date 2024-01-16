@@ -74,7 +74,7 @@ const TrackWorkout = () => {
           type="text"
           value={newEntry.exercise}
           onChange={(e) => setNewEntry({ ...newEntry, exercise: e.target.value })}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg text-s"
         />
       </div>
       <div className="mb-4 text-red-500">{errorMessage}</div>
@@ -87,7 +87,7 @@ const TrackWorkout = () => {
             const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
             setNewEntry({ ...newEntry, sets: parsedValue });
           }}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg text-s"
         />
       </div>
       <div className="mb-4">
@@ -99,7 +99,7 @@ const TrackWorkout = () => {
             const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
             setNewEntry({ ...newEntry, reps: parsedValue });
           }}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg text-s"
         />
 
       </div>
@@ -112,12 +112,12 @@ const TrackWorkout = () => {
           const parsedValue = e.target.value.replace(/[^0-9]/g, ''); // Allow only numeric characters
           setNewEntry({ ...newEntry, weight: parsedValue });
         }}
-        className="border p-2 w-full"
+        className="border-2 p-2 w-full rounded-lg text-s"
       />
       </div>
       <button
-        onClick={addWorkoutEntry}
-        className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+        onClick={addWorkoutEntry}        
+        className="bg-teal-500 text-white font-semibold text-sm py-2 px-4 rounded hover:bg-teal-600"
       >
         Add Workout Entry
       </button>
@@ -136,7 +136,7 @@ const TrackWorkout = () => {
 
       <button
         onClick={SaveWorkoutLog}
-        className="mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+        className="bg-teal-500 text-white font-semibold text-sm py-2 px-4 rounded hover:bg-teal-600"
       >
         Save Workout Log
       </button>

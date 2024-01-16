@@ -3,27 +3,114 @@
 // sql data base name: Nick
 // pw: 19701120Nfong!
 
+//docker run --name FitFlow -e POSTGRES_PASSWORD=19701120 -p 5432:5432 -d postgres
+
+/*
+Commands to know:
+
+To start new docker: docker run --name FitFlow -e POSTGRES_PASSWORD=19701120 -p 5432:5432 -d postgres
+To see which containers are running: docker ps
+
+To intialize: 
+docker exec -ti FitFlow createdb -U postgres FitFlowAI
+String to access docker command line: docker exec -ti FitFlow psql -U postgres
+
+To view relaqtions: \dt
+To connect to database: \c FitFlowAI
+*/
+
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	_ "github.com/microsoft/go-mssqldb"
+	_ "github.com/lib/pq"
 	"github.com/rs/cors"
-	"context"
-	"io/ioutil"
-	"bytes"
 )
 
-var db *sql.DB
-var server = "fitflow.database.windows.net"
-var port = 1433
-var user = "Nick"
-var password = "19701120Nfong!"
-var database = "FitFlowAI User"
+func main() {
+	connStr := "postgres://postgres:19701120@localhost:5432/FitFlowAI?sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	createUserTable(db)
+	changeTable(db)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		registerHandler(w, r, db)
+	})
+
+	handler := cors.Default().Handler(mux)
+
+	log.Fatal(http.ListenAndServe(":8080", handler))
+}
+
+/** 
+
+	This method creates the User Table in the Postgres SQL sever
+	@var db *sql.DB
+
+
+*/
+
+func createUserTable(db *sql.DB) {
+	query := `
+    CREATE TABLE IF NOT EXISTS "User" (
+        UserID SERIAL PRIMARY KEY,
+        Name VARCHAR(255) NOT NULL UNIQUE,
+        Password VARCHAR(255) NOT NULL
+    )`
+
+	_, err := db.Exec(query)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+
+func registerHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	var registrationData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&registrationData); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := insertUser(db, registrationData.Email, registrationData.Password)
+	if err != nil {
+		http.Error(w, "Failed to register user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func insertUser(db *sql.DB, email, password string) error {
+	query := `
+		INSERT INTO "User" (Name, Password)
+		VALUES ($1, $2)
+	`
+
+	_, err := db.ExecContext(context.Background(), query, email, password)
+	return err
+}
+
+/*
 
 type User struct {
 	UserID   int
@@ -74,7 +161,6 @@ func main() {
 		fmt.Println("Error creating WorkoutEntries table:", err)
 		return
 	}
-	*/
 
 
 	c := cors.Default()
@@ -218,7 +304,7 @@ func insertWorkoutLog(log WorkoutLog) error {
 	VALUES (%d, '%s')
 	`, log.UserID, log.Date))
 	if err != nil {
-		log.Println("Error inserting into WorkoutLogs table:", err)
+	
 		return err
 	}
 
@@ -248,6 +334,7 @@ func insertWorkoutLog(log WorkoutLog) error {
 	return nil
 }
 
+
 func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -276,3 +363,5 @@ func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+*/
