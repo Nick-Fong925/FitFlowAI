@@ -41,11 +41,12 @@ const TrackWorkout = () => {
 
   
   const SaveWorkoutLog = async () => {
+    console.log(currentLog)
     try {
       await axios.post('http://localhost:8080/saveWorkoutLog', currentLog);
-
+ 
       setCurrentLog({
-        userID: 10, // Replace with the actual user ID
+        userID: 1, // Replace with the actual user ID
         date: new Date().toLocaleDateString(),
         entries: [],
       });

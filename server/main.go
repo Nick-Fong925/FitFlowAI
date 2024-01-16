@@ -26,10 +26,33 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"fmt"
 	"net/http"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 )
+
+type User struct {
+	UserID   int    `json:"userID"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+type ExerciseEntry struct {
+	ExerciseID   int    `json:"exerciseID"`
+	EntryID      int    `json:"entryID"`
+	ExerciseName string `json:"exerciseName"`
+	Sets         int    `json:"sets"`
+	Reps         int    `json:"reps"`
+	Weight       int    `json:"weight"`
+}
+
+type WorkoutLog struct {
+	EntryID  int            `json:"entryID"`
+	UserID   int            `json:"userID"`
+	Date     string         `json:"date"`
+	Exercises []ExerciseEntry `json:"exercises"`
+}
 
 func main() {
 	connStr := "postgres://postgres:19701120@localhost:5432/FitFlowAI?sslmode=disable"
@@ -44,12 +67,24 @@ func main() {
 	}
 
 	createUserTable(db)
-	changeTable(db)
+	createWorkoutEntryTable(db)
+	createExcerciseEntryTable(db)
+
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		registerHandler(w, r, db)
 	})
+
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		loginHandler(w, r, db)
+	})
+
+	mux.HandleFunc("/saveWorkoutLog", func(w http.ResponseWriter, r *http.Request) {
+		saveWorkoutLogHandler(w, r, db)
+	})
+
+
 
 	handler := cors.Default().Handler(mux)
 
@@ -57,11 +92,8 @@ func main() {
 }
 
 /** 
-
 	This method creates the User Table in the Postgres SQL sever
 	@var db *sql.DB
-
-
 */
 
 func createUserTable(db *sql.DB) {
@@ -79,6 +111,43 @@ func createUserTable(db *sql.DB) {
 	}
 }
 
+func createWorkoutEntryTable(db *sql.DB) {
+	query := `
+	CREATE TABLE IF NOT EXISTS WorkoutEntry (
+        EntryID SERIAL PRIMARY KEY,
+        UserID INT REFERENCES "User"(UserID),
+        Date DATE NOT NULL
+    )`
+
+	_, err := db.Exec(query)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func createExcerciseEntryTable(db *sql.DB) {
+	query := `
+	CREATE TABLE IF NOT EXISTS ExerciseEntry (
+        ExerciseID SERIAL PRIMARY KEY,
+        EntryID INT REFERENCES WorkoutEntry(EntryID),
+        ExerciseName VARCHAR(255) NOT NULL,
+        Sets INT,
+        Reps INT,
+        Weight INT
+    )`
+
+	_, err := db.Exec(query)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+/** 
+	This method handles the request to register a new User into the User table
+	@var w http.ResponseWriter, r *http.Request, db *sql.DB
+*/
 
 func registerHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var registrationData struct {
@@ -100,6 +169,11 @@ func registerHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.WriteHeader(http.StatusOK)
 }
 
+/** 
+	This method handles inserting the User into the User Table
+	@var db *sql.DB, email, password string
+*/
+
 func insertUser(db *sql.DB, email, password string) error {
 	query := `
 		INSERT INTO "User" (Name, Password)
@@ -110,115 +184,12 @@ func insertUser(db *sql.DB, email, password string) error {
 	return err
 }
 
-/*
+/** 
+	This method handles inserting the User into the User Table
+	@var w http.ResponseWriter, r *http.Request, db *sql.DB
+*/
 
-type User struct {
-	UserID   int
-	Name     string
-	Password string
-}
-
-type WorkoutLog struct {
-	UserID  int       `json:"userID"`
-	Date    string    `json:"date"`
-	Entries []Entry   `json:"entries"`
-}
-
-
-type Entry struct {
-	Exercise string `json:"exercise"`
-	Sets     int    `json:"sets"`
-	Reps     int    `json:"reps"`
-	Weight   int    `json:"weight"`
-}
-
-
-func main() {
-
-	connString := getConnectionString()
-	var err error
-
-	db, err = sql.Open("sqlserver", connString)
-	if err != nil {
-		log.Fatal("Error creating connection pool: ", err.Error())
-	}
-	ctx := context.Background()
-	err = db.PingContext(ctx)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	fmt.Printf("Connected!")
-
-	/*
-	err = createWorkoutLogsTable()
-	if err != nil {
-		fmt.Println("Error creating WorkoutLogs table:", err)
-		return
-	}
-
-	err = createWorkoutEntriesTable()
-	if err != nil {
-		fmt.Println("Error creating WorkoutEntries table:", err)
-		return
-	}
-
-
-	c := cors.Default()
-	handler := c.Handler(http.DefaultServeMux)
-
-	// Register the "/register" route
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/saveWorkoutLog", saveWorkoutLogHandler)
-
-
-	log.Fatal(http.ListenAndServe(":8080", handler))
-}
-
-func getConnectionString() string {
-	return fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s;",
-		server, user, password, port, database)
-}
-
-//REGISTER HANDLER
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse the request body
-	var registrationData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&registrationData); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Insert the user data into the database
-	err := insertUser(registrationData.Email, registrationData.Password)
-	if err != nil {
-		http.Error(w, "Failed to register user", http.StatusInternalServerError)
-		return
-	}
-
-	// Send a success response
-	w.WriteHeader(http.StatusOK)
-}
-
-
- //INSERT USER FUNCTION
-func insertUser(email, password string) error {
-	// SQL statement to insert user into the User table
-	query := `
-		INSERT INTO "User" (Name, Password)
-		VALUES ('` + email + `', '` + password + `');
-	`
-
-	// Execute the query
-	_, err := db.ExecContext(context.Background(), query)
-	return err
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
     // Parse the request body
     var loginData struct {
         Email    string `json:"email"`
@@ -230,7 +201,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    _, err := loginUser(loginData.Email, loginData.Password)
+    _, err := loginUser(db, loginData.Email, loginData.Password)
     if err != nil {
         http.Error(w, err.Error(), http.StatusUnauthorized)
         return
@@ -240,128 +211,93 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
-func loginUser(email, password string) (*User, error) {
-    // SQL statement to select user by email
-    query := `
-        SELECT UserID, Name, Password FROM [User]
-        WHERE Name = @name;
+/** 
+	This method logs the user in depending  by checking to see if user exists/matching the password
+	@var email, password string
+*/
+
+func loginUser(db *sql.DB, email, password string) (*User, error) {
+	// SQL statement to select user by email
+	query := `
+        SELECT UserID, Name, Password FROM "User"
+        WHERE Name = $1;
     `
 
-    // Execute the query
-    var user User
-    err := db.QueryRowContext(context.Background(), query, sql.Named("name", email)).
-        Scan(&user.UserID, &user.Name, &user.Password)
+	// Execute the query
+	var user User
+	err := db.QueryRowContext(context.Background(), query, email).
+		Scan(&user.UserID, &user.Name, &user.Password)
 
-    if err == sql.ErrNoRows {
-        return nil, fmt.Errorf("User does not exist. Please register.")
-    } else if err != nil {
-        return nil, err
-    }
-
- 
-    if user.Password != password {
-        return nil, fmt.Errorf("Invalid password")
-    }
-
-    return &user, nil
-}
-
-func getUsers() ([]User, error) {
-	query := `
-		SELECT UserID, Name, Password FROM [User];
-	`
-
-	rows, err := db.QueryContext(context.Background(), query)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("User does not exist. Please register.")
+	} else if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var users []User
-	for rows.Next() {
-		var user User
-		err := rows.Scan(&user.UserID, &user.Name, &user.Password)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, user)
+	if user.Password != password {
+		return nil, fmt.Errorf("Invalid password")
 	}
 
-	return users, nil
+	return &user, nil
 }
 
-func insertWorkoutLog(log WorkoutLog) error {
-	// Begin a transaction
-	tx, err := db.BeginTx(context.Background(), nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-
-	result, err := tx.ExecContext(context.Background(), fmt.Sprintf(`
-	INSERT INTO WorkoutLogs (UserID, Date)
-	VALUES (%d, '%s')
-	`, log.UserID, log.Date))
-	if err != nil {
-	
-		return err
+func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	var workoutLog struct {
+		UserID   int `json:"userID"`
+		Date     string `json:"date"`
+		Exercises []struct {
+			ExerciseName string `json:"exerciseName"`
+			Sets         int    `json:"sets"`
+			Reps         int    `json:"reps"`
+			Weight       int    `json:"weight"`
+		} `json:"exercises"`
 	}
 
-
-
-	logID, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-	for _, entry := range log.Entries {
-		_, err := tx.ExecContext(context.Background(), fmt.Sprintf(`
-			INSERT INTO WorkoutEntries (LogID, Exercise, Sets, Reps, Weight)
-			VALUES (%d, '%s', %d, %d, %d)
-		`, logID, entry.Exercise, entry.Sets, entry.Reps, entry.Weight))
-		if err != nil {
-			return err
-		}
-	}
-
-
-	if err := tx.Commit(); err != nil {
-		fmt.Println("Error committing transaction:", err)
-		return err
-	}
-
-	fmt.Println("Workout log inserted successfully!")
-	return nil
-}
-
-
-func saveWorkoutLogHandler(w http.ResponseWriter, r *http.Request) {
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
-		return
-	}
-
-
-	fmt.Println("Received workout log request body:", string(body))
-
-
-	bodyReader := bytes.NewReader(body)
-
-	var workoutLog WorkoutLog
-	if err := json.NewDecoder(bodyReader).Decode(&workoutLog); err != nil {
+	// Decode the request body into the workoutLog struct
+	if err := json.NewDecoder(r.Body).Decode(&workoutLog); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-
-	if err := insertWorkoutLog(workoutLog); err != nil {
-		http.Error(w, "Error inserting workout log into the database", http.StatusInternalServerError)
+	// Save the workout log to the database
+	entryID, err := saveWorkoutLog(db, workoutLog)
+	if err != nil {
+		http.Error(w, "Failed to save workout log", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Respond with the entryID of the saved workout log
+	response := map[string]interface{}{"entryID": entryID}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+func saveWorkoutLog(db *sql.DB, workoutLog WorkoutLog) (int, error) {
+	// Insert the workout entry into WorkoutEntry table
+	workoutEntryQuery := `
+		INSERT INTO WorkoutEntry (UserID, Date)
+		VALUES ($1, $2)
+		RETURNING EntryID
+	`
+	var entryID int
+	err := db.QueryRow(workoutEntryQuery, workoutLog.UserID, workoutLog.Date).Scan(&entryID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Insert the exercises into ExerciseEntry table
+	exerciseQuery := `
+		INSERT INTO ExerciseEntry (EntryID, ExerciseName, Sets, Reps, Weight)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	for _, exercise := range workoutLog.Exercises {
+		_, err := db.Exec(exerciseQuery, entryID, exercise.ExerciseName, exercise.Sets, exercise.Reps, exercise.Weight)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return entryID, nil
 }
 
-*/
+
