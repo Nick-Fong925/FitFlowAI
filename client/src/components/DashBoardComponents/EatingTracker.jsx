@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-//API Key for OpenAI: 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
 
 const TrackEating = () => {
   const [mealLogs, setMealLogs] = useState([]);
@@ -52,7 +51,7 @@ const TrackEating = () => {
           type="text"
           value={newFoodItem.food}
           onChange={(e) => setNewFoodItem({ ...newFoodItem, food: e.target.value })}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg"
         />
       </div>
       <div className="mb-4">
@@ -61,7 +60,7 @@ const TrackEating = () => {
           type="number"
           value={newFoodItem.quantity}
           onChange={(e) => setNewFoodItem({ ...newFoodItem, quantity: parseInt(e.target.value) })}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg text-s"
         />
       </div>
       <div className="mb-4">
@@ -70,12 +69,12 @@ const TrackEating = () => {
           type="number"
           value={newFoodItem.calories}
           onChange={(e) => setNewFoodItem({ ...newFoodItem, calories: parseInt(e.target.value) })}
-          className="border p-2 w-full"
+          className="border-2 p-2 w-full rounded-lg text-s"
         />
       </div>
       <button
         onClick={addFoodItem}
-        className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+        className="bg-teal-500 text-white font-semibold text-sm py-2 px-4 rounded hover:bg-teal-600"
       >
         Add Food Item
       </button>
@@ -95,7 +94,7 @@ const TrackEating = () => {
       {/* Button to save meal log */}
       <button
         onClick={addMealLog}
-        className="mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+        className="bg-teal-500 text-white font-semibold text-sm py-2 px-4 rounded hover:bg-teal-600"
       >
         Save Meal Log
       </button>
