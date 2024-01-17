@@ -1,47 +1,95 @@
 import { useState } from 'react';
-
+import axios from 'axios';
 
 const TrackEating = () => {
+
   const [mealLogs, setMealLogs] = useState([]);
+
   const [currentMeal, setCurrentMeal] = useState({
+    userID: 1, 
     date: new Date().toLocaleDateString(),
     items: [],
   });
+
   const [newFoodItem, setNewFoodItem] = useState({
     food: '',
     quantity: 0,
     calories: 0,
   });
 
-  const addMealLog = () => {
-    setMealLogs([...mealLogs, currentMeal]);
-    setCurrentMeal({
-      date: new Date().toLocaleDateString(),
-      items: [],
-    });
-    setNewFoodItem({
-      food: '',
-      quantity: 0,
-      calories: 0,
-    });
+  const [loading, setLoading] = useState(false);
+
+  const addMealLog = async () => {
+
+    setLoading(true);
+
+    try {
+
+      await saveMealLogToServer(currentMeal);
+
+      setMealLogs([...mealLogs, currentMeal]);
+
+      setCurrentMeal({
+        date: new Date().toLocaleDateString(),
+        items: [],
+      });
+
+      setNewFoodItem({
+        food: '',
+        quantity: 0,
+        calories: 0,
+      });
+
+    } catch (error) {
+
+      console.error('Error saving meal log:', error);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
   };
 
   const addFoodItem = () => {
+
     setCurrentMeal({
       ...currentMeal,
       items: [...currentMeal.items, newFoodItem],
     });
+
     setNewFoodItem({
       food: '',
       quantity: 0,
       calories: 0,
     });
+
+  };
+
+  const saveMealLogToServer = async (mealLog) => {
+
+    try {
+
+      await axios.post('http://localhost:8080/saveMealLog', mealLog);
+
+      console.log('Meal log saved successfully!');
+
+    } catch (error) {
+
+      console.error('Error saving meal log to server:', error);
+
+      throw error;
+
+    }
   };
   
  
 
   return (
+  
     <div className="p-4">
+      
       <h1 className="text-2xl font-bold mb-4">Track Eating</h1>
 
       {/* Form to add new food item */}
@@ -95,8 +143,9 @@ const TrackEating = () => {
       <button
         onClick={addMealLog}
         className="bg-teal-500 text-white font-semibold text-sm py-2 px-4 rounded hover:bg-teal-600"
+        disabled={loading}
       >
-        Save Meal Log
+        {loading ? 'Saving...' : 'Save Meal Log'}
       </button>
 
       {/* Display all meal logs */}

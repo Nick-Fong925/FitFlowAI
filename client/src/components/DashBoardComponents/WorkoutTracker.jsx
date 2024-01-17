@@ -7,7 +7,7 @@ const TrackWorkout = () => {
   const [errorMessage, setErrorMessage] = useState('');
   
   const [currentLog, setCurrentLog] = useState({
-    userID: 10, //UPDATE TO ACTUAL USER ID AFTER USER AUTH CREATED 
+    userID: 1, 
     date: new Date().toLocaleDateString(),
     entries: [],
   });
