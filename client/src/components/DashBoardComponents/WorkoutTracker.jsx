@@ -1,13 +1,15 @@
-import  { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const TrackWorkout = () => {
 
-  
+  const actualUserID = 1;
+
+  const [workoutLogs, setWorkoutLogs] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   
   const [currentLog, setCurrentLog] = useState({
-    userID: 10, //UPDATE TO ACTUAL USER ID AFTER USER AUTH CREATED 
+    userID: actualUserID, 
     date: new Date().toLocaleDateString(),
     entries: [],
   });
@@ -17,6 +19,13 @@ const TrackWorkout = () => {
     reps: 0,
     weight: 0,
   });
+
+
+
+  useEffect(() => {
+
+    fetchWorkoutLogs();
+  }, []); 
 
 
   const addWorkoutEntry = () => {
@@ -39,6 +48,15 @@ const TrackWorkout = () => {
     }
   };
 
+  const fetchWorkoutLogs = async () => {
+    try {
+      // Replace actualUserID with the variable or state that holds the real user ID
+      const response = await axios.get(`http://localhost:8080/getAllWorkoutLogs?userID=${actualUserID}`);
+      setWorkoutLogs(response.data);
+    } catch (error) {
+      console.error('Error fetching workout logs:', error);
+    }
+  };
   
   const SaveWorkoutLog = async () => {
     console.log(currentLog)
@@ -46,7 +64,7 @@ const TrackWorkout = () => {
       await axios.post('http://localhost:8080/saveWorkoutLog', currentLog);
  
       setCurrentLog({
-        userID: 1, // Replace with the actual user ID
+        userID: actualUserID, // Replace with the actual user ID
         date: new Date().toLocaleDateString(),
         entries: [],
       });
@@ -56,6 +74,8 @@ const TrackWorkout = () => {
         reps: 0,
         weight: 0,
       });
+
+      await fetchWorkoutLogs();
 
     } catch (error) {
       console.error('Error saving workout log:', error);
@@ -141,8 +161,29 @@ const TrackWorkout = () => {
       >
         Save Workout Log
       </button>
-  
+
+      <div className="mt-8">
+      <h2 className="text-xl font-bold mb-4">All Workout Logs</h2>
+        {workoutLogs && workoutLogs.length > 0 ? (
+          workoutLogs.map((log) => (
+            <div key={log.entryID} className="mb-4 border rounded p-4">
+              <h3 className="text-lg font-semibold">{log.date}</h3>
+              <ul>
+                {log.entries.map((entry, index) => (
+                  <li key={index}>
+                    {entry.exercise} - {entry.sets} sets, {entry.reps} reps, {entry.weight} lbs
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        ) : (
+          <p>No workout logs available.</p>
+        )}
+      </div>
     </div>
+  
+
   );
 };
 
