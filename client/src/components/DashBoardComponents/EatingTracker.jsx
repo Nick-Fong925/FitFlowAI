@@ -31,6 +31,12 @@ const TrackEating = () => {
     }
   };
 
+  function formatDate(dateString) {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', options);
+  }
+
   const addMealLog = async () => {
 
     setLoading(true);
@@ -154,12 +160,12 @@ const TrackEating = () => {
       </button>
 
       {/* Display current meal log */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Current Meal Log - {currentMeal.date}</h2>
-        <ul>
+      <div className="border-4 border-teal-600 bg-teal-50 rounded-xl p-4 max-w-xs font-semibold text-xs mt-10 mb-10 ">
+        <h2 className="text-lg font-bold mb-4">{formatDate(currentMeal.date)}</h2>
+        <ul >
           {currentMeal.items.map((item, index) => (
             <li key={index}>
-              {item.food} - {item.quantity} servings, {item.calories} calories
+              {item.food}: {item.quantity} servings, {item.calories} calories
             </li>
           ))}
         </ul>
@@ -177,24 +183,26 @@ const TrackEating = () => {
       {/* Display all meal logs */}
      
       <div className="mt-8">
-      <h2 className="text-xl font-bold mb-4">All Meal Logs</h2>
-      {mealLogs && mealLogs.length > 0 ? (
-        mealLogs.map((log) => (
-          <div key={log.entryID} className="mb-4 border rounded p-4">
-            <h3 className="text-lg font-semibold">{log.date}</h3>
-            <ul>
-              {log.items.map((item, index) => (
-                <li key={index}>
-                  {item.food} - {item.quantity} servings, {item.calories} calories
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
-      ) : (
-        <p>No meal logs available.</p>
-      )}
+  <h2 className="text-xl font-bold mb-4">All Meal Logs</h2>
+  {mealLogs && mealLogs.length > 0 ? (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 xl:grid-cols-5">
+      {mealLogs.map((log) => (
+        <div key={log.entryID} className="border-4 border-teal-600 bg-teal-50 rounded-xl p-4 max-w-xs font-semibold text-xs">
+           <p className="mb-3 font-bold text-slate-500 text-m"> {formatDate(log.date)}</p>
+          <ul>
+            {log.items.map((item, index) => (
+              <li key={index}>
+                <span className="font-bold">{item.food}:</span> {item.quantity} servings, {item.calories} calories
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
+  ) : (
+    <p>No meal logs available.</p>
+  )}
+</div>
      </div>
 
   );
