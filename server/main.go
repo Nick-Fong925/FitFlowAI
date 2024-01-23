@@ -15,7 +15,7 @@ To intialize:
 docker exec -ti FitFlow createdb -U postgres FitFlowAI
 String to access docker command line: docker exec -ti FitFlow psql -U postgres
 
-To view relaqtions: \dt
+To view relations: \dt
 To connect to database: \c FitFlowAI
 */
 
@@ -27,9 +27,12 @@ import (
 	"encoding/json"
 	"log"
 	"fmt"
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
+	"strconv"
 )
 
 type User struct {
@@ -50,10 +53,34 @@ type WorkoutLog struct {
 	} `json:"entries"`
 }
 
+type WorkoutLogResponse struct {
+	EntryID int `json:"entryID"`
+	UserID  int `json:"userID"`
+	Date    string `json:"date"`
+	Entries []struct {
+		Exercise string `json:"exercise"`
+		Sets     int    `json:"sets"`
+		Reps     int    `json:"reps"`
+		Weight   int    `json:"weight"`
+	} `json:"entries"`
+}
+
+
 type EatingLog struct {
 	UserID int `json:"userID"`
 	Date   string `json:"date"`
 	Items  []struct {
+		Food     string `json:"food"`
+		Quantity int    `json:"quantity"`
+		Calories int    `json:"calories"`
+	} `json:"items"`
+}
+
+type MealLogResponse struct {
+	EntryID int `json:"entryID"`
+	UserID  int `json:"userID"`
+	Date    string `json:"date"`
+	Items   []struct {
 		Food     string `json:"food"`
 		Quantity int    `json:"quantity"`
 		Calories int    `json:"calories"`
@@ -96,8 +123,14 @@ func main() {
 		saveEatingLogHandler(w, r, db)
 	})
 
+	
+	mux.HandleFunc("/getAllMealLogs", func(w http.ResponseWriter, r *http.Request) {
+		getAllMealLogsHandler(w, r, db)
+	})
 
-
+	mux.HandleFunc("/getAllWorkoutLogs", func(w http.ResponseWriter, r *http.Request) {
+		getAllWorkoutLogsHandler(w, r, db)
+	})
 
 
 
@@ -360,11 +393,17 @@ func saveWorkoutLog(db *sql.DB, workoutLog WorkoutLog) (int, error) {
 func saveEatingLogHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var eatingLog EatingLog
 
-	// Decode the request body into the eatingLog struct
-	if err := json.NewDecoder(r.Body).Decode(&eatingLog); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+    // Debugging output
+    body, _ := ioutil.ReadAll(r.Body)
+    fmt.Printf("Raw Request Body: %s\n", body)
+
+    if err := json.NewDecoder(bytes.NewReader(body)).Decode(&eatingLog); err != nil {
+        fmt.Printf("Error decoding JSON: %v\n", err)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    fmt.Printf("Received EatingLog JSON: %+v\n", eatingLog)
 
 	// Save the eating log to the database
 	entryID, err := saveEatingLog(db, eatingLog)
@@ -423,5 +462,143 @@ func saveEatingLog(db *sql.DB, eatingLog EatingLog) (int, error) {
 	return entryID, nil
 }
 
+
+func getAllMealLogsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+
+	userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+	mealLogs, err := getAllMealLogs(db, userID)
+	if err != nil {
+		// Handle the error and respond with an error status
+		log.Println("Error fetching all meal logs:", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with the fetched meal logs in JSON format
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(mealLogs)
+}
+
+// Function to fetch all meal logs from the database
+func getAllMealLogs(db *sql.DB, userID int) ([]MealLogResponse, error) {
+	query := `
+		SELECT e.EntryID, e.UserID, e.Date, 
+			json_agg(json_build_object(
+				'food', fi.Food, 
+				'quantity', fi.Quantity, 
+				'calories', fi.Calories
+			)) as items
+		FROM EatingEntry e
+		LEFT JOIN FoodItemEntry fi ON e.EntryID = fi.EntryID
+		WHERE e.UserID = $1
+		GROUP BY e.EntryID, e.UserID, e.Date
+		ORDER BY e.Date DESC
+	`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mealLogs []MealLogResponse
+
+	for rows.Next() {
+		var mealLog MealLogResponse
+		var itemsJSON string
+
+		if err := rows.Scan(&mealLog.EntryID, &mealLog.UserID, &mealLog.Date, &itemsJSON); err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal([]byte(itemsJSON), &mealLog.Items); err != nil {
+			return nil, err
+		}
+
+		mealLogs = append(mealLogs, mealLog)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return mealLogs, nil
+}
+
+func getAllWorkoutLogsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    // Fetch workout logs based on user ID from the database
+    workoutLogs, err := getAllWorkoutLogs(db, userID)
+    if err != nil {
+        // Handle the error and respond with an error status
+        log.Println("Error fetching workout logs:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    // Respond with the fetched workout logs in JSON format
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(workoutLogs)
+}
+
+// Function to fetch all workout logs from the database
+func getAllWorkoutLogs(db *sql.DB, userID int) ([]WorkoutLogResponse, error) {
+	query := `
+		SELECT e.EntryID, e.UserID, e.Date, 
+			json_agg(json_build_object(
+				'exercise', we.ExerciseName, 
+				'sets', we.Sets, 
+				'reps', we.Reps,
+				'weight', we.Weight
+			)) as entries
+		FROM WorkoutEntry e
+		LEFT JOIN ExerciseEntry we ON e.EntryID = we.EntryID
+		WHERE e.UserID = $1
+		GROUP BY e.EntryID, e.UserID, e.Date
+		ORDER BY e.Date DESC
+	`
+
+	rows, err := db.Query(query, userID) // Pass userID as an argument
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var workoutLogs []WorkoutLogResponse
+
+	for rows.Next() {
+		var workoutLog WorkoutLogResponse
+		var entriesJSON string
+
+		if err := rows.Scan(&workoutLog.EntryID, &workoutLog.UserID, &workoutLog.Date, &entriesJSON); err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal([]byte(entriesJSON), &workoutLog.Entries); err != nil {
+			return nil, err
+		}
+
+		workoutLogs = append(workoutLogs, workoutLog)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return workoutLogs, nil
+}
 
 

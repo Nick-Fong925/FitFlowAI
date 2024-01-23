@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const TrackEating = () => {
 
+  const actualUserID = 4;
+
   const [mealLogs, setMealLogs] = useState([]);
 
   const [currentMeal, setCurrentMeal] = useState({
-    userID: 1, 
+    userID: actualUserID, 
     date: new Date().toLocaleDateString(),
     items: [],
   });
@@ -19,6 +21,16 @@ const TrackEating = () => {
 
   const [loading, setLoading] = useState(false);
 
+  
+    const fetchMealLogs = async () => {
+    try {
+      const response = await axios.get(`http://localhost:8080/getAllMealLogs?userID=${actualUserID}`);
+      setMealLogs(response.data);
+    } catch (error) {
+      console.error('Error fetching meal logs:', error);
+    }
+  };
+
   const addMealLog = async () => {
 
     setLoading(true);
@@ -30,6 +42,7 @@ const TrackEating = () => {
       setMealLogs([...mealLogs, currentMeal]);
 
       setCurrentMeal({
+        userID: actualUserID, 
         date: new Date().toLocaleDateString(),
         items: [],
       });
@@ -39,6 +52,8 @@ const TrackEating = () => {
         quantity: 0,
         calories: 0,
       });
+
+      await fetchMealLogs();
 
     } catch (error) {
 
@@ -67,13 +82,18 @@ const TrackEating = () => {
 
   };
 
+
   const saveMealLogToServer = async (mealLog) => {
 
     try {
 
+      console.log(mealLog)
+
       await axios.post('http://localhost:8080/saveMealLog', mealLog);
 
       console.log('Meal log saved successfully!');
+
+      await fetchMealLogs();
 
     } catch (error) {
 
@@ -83,13 +103,19 @@ const TrackEating = () => {
 
     }
   };
+
+  
+  useEffect(() => {
+    fetchMealLogs();
+  }, []);
+
   
  
 
   return (
   
     <div className="p-4">
-      
+
       <h1 className="text-2xl font-bold mb-4">Track Eating</h1>
 
       {/* Form to add new food item */}
@@ -149,17 +175,28 @@ const TrackEating = () => {
       </button>
 
       {/* Display all meal logs */}
+     
       <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">All Meal Logs</h2>
-        <ul>
-          {mealLogs.map((log, index) => (
-            <li key={index}>
-              {log.date} - {log.items.length} items
-            </li>
-          ))}
-        </ul>
-      </div>
+      <h2 className="text-xl font-bold mb-4">All Meal Logs</h2>
+      {mealLogs && mealLogs.length > 0 ? (
+        mealLogs.map((log) => (
+          <div key={log.entryID} className="mb-4 border rounded p-4">
+            <h3 className="text-lg font-semibold">{log.date}</h3>
+            <ul>
+              {log.items.map((item, index) => (
+                <li key={index}>
+                  {item.food} - {item.quantity} servings, {item.calories} calories
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      ) : (
+        <p>No meal logs available.</p>
+      )}
     </div>
+     </div>
+
   );
 };
 
