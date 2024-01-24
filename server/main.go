@@ -87,6 +87,19 @@ type MealLogResponse struct {
 	} `json:"items"`
 }
 
+type MealAnalyticsResponse struct {
+	Date     string  `json:"date"`
+    Calories float64 `json:"calories"`
+    Quantity float64 `json:"quantity"`
+}
+
+type WorkoutAnalyticsResponse struct {
+	Date     string  `json:"date"`
+    Sets float64 `json:"sets"`
+    Reps float64 `json:"reps"`
+	Weight float64 `json:"weight"`
+}
+
 func main() {
 	connStr := "postgres://postgres:19701120@localhost:5432/FitFlowAI?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
@@ -141,6 +154,13 @@ func main() {
 		deleteMealEntryHandler(w, r, db)
 	})
 
+	mux.HandleFunc("/getMealAnalytics", func(w http.ResponseWriter, r *http.Request) {
+		getMealAnalyticsHandler(w, r, db)
+	})
+
+	mux.HandleFunc("/getWorkoutAnalytics", func(w http.ResponseWriter, r *http.Request) {
+		getWorkoutAnalyticsHandler(w, r, db)
+	})
 
 	corsHandler := cors.New(cors.Options{
     AllowedOrigins: []string{"*"}, // Allow all origins
@@ -636,6 +656,126 @@ func getAllMealLogsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(mealLogs)
 }
+
+func getMealAnalyticsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    mealLogs, err := getMealAnalytics(db, userID)
+    if err != nil {
+        log.Println("Error fetching meal logs:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(mealLogs)
+}
+
+
+func getMealAnalytics(db *sql.DB, userID int) ([]MealAnalyticsResponse, error) {
+			query := `
+			SELECT e.Date, 
+				COALESCE(fi.Calories, 0) as Calories,
+				COALESCE(fi.Quantity, 0) as Quantity
+			FROM EatingEntry e
+			LEFT JOIN FoodItemEntry fi ON e.EntryID = fi.EntryID
+			WHERE e.UserID = $1
+			ORDER BY e.Date DESC
+		`
+
+		rows, err := db.Query(query, userID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var mealLogs []MealAnalyticsResponse
+
+		for rows.Next() {
+			var mealLog MealAnalyticsResponse
+
+			if err := rows.Scan(&mealLog.Date, &mealLog.Calories, &mealLog.Quantity); err != nil {
+				return nil, err
+			}
+
+			mealLogs = append(mealLogs, mealLog)
+			fmt.Printf("Backend Meal Log: %+v\n", mealLog)
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		return mealLogs, nil
+}
+
+
+
+func getWorkoutAnalyticsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    workoutLogs, err := getWorkoutAnalytics(db, userID)
+    if err != nil {
+        log.Println("Error fetching workout logs:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(workoutLogs)
+}
+
+
+func getWorkoutAnalytics(db *sql.DB, userID int) ([]WorkoutAnalyticsResponse, error) {
+			query := `
+			SELECT w.Date, 
+				COALESCE(ee.Sets, 0) as Sets,
+				COALESCE(ee.Reps, 0) as Reps,
+				COALESCE(ee.Weight, 0) as Weight
+			FROM WorkoutEntry w
+			LEFT JOIN ExerciseEntry ee ON w.EntryID = ee.EntryID
+			WHERE w.UserID = $1
+			ORDER BY w.Date DESC
+		`
+
+		rows, err := db.Query(query, userID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var workoutLogs []WorkoutAnalyticsResponse
+
+		for rows.Next() {
+			var workoutLog WorkoutAnalyticsResponse
+
+			if err := rows.Scan(&workoutLog.Date, &workoutLog.Sets, &workoutLog.Reps, &workoutLog.Weight); err != nil {
+				return nil, err
+			}
+
+			workoutLogs = append(workoutLogs, workoutLog )
+			fmt.Printf("Backend Workout Log: %+v\n", workoutLog )
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		return workoutLogs, nil
+}
+
 
 // Function to fetch all meal logs from the database
 func getAllMealLogs(db *sql.DB, userID int) ([]MealLogResponse, error) {

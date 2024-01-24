@@ -59,7 +59,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
                 alt={tab}
                 className={`mr-2 ml-2 mb-10 flex items-left ${isSidebarExpanded ? 'w-10 h-10' : 'w-12 h-12'}`}
               />
-              <span className={`mb-10 text-sm ${isSidebarExpanded ? 'visible' : 'invisible'}`}>
+              <span className={`mb-10 text-sm text-teal-500 ${isSidebarExpanded ? 'visible' : 'invisible'}`}>
                 {descriptions[tab]}
               </span>
             </div>
