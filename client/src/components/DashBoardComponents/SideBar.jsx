@@ -3,17 +3,20 @@ import PropTypes from 'prop-types';
 import AICoachIcon from '../../assets/DashboardIcons/ai.png';
 import EatingLogIcon from '../../assets/DashboardIcons/salad.png';
 import WorkoutLogIcon from '../../assets/DashboardIcons/weightlifting.png';
+import Chef from "../../assets/DashboardIcons/chef-hat.png"
 
 const Sidebar = ({ activeTab, onTabChange }) => {
   const icons = {
     'Log Workout': WorkoutLogIcon,
     'Log Eating': EatingLogIcon,
+    'AI Chef': Chef,
     'AI Fitness Coach': AICoachIcon,
   };
 
   const descriptions = {
     'Log Workout': 'Workout Log',
     'Log Eating': 'Meal Tracker',
+    'AI Chef': 'Recipe Creator',
     'AI Fitness Coach': 'FitFlow Coach',
   };
 

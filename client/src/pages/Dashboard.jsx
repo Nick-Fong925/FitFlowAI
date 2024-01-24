@@ -18,7 +18,8 @@ function Dashboard() {
       <main className="flex-1 overflow-x-hidden overflow-y-auto">
         {activeTab === 'Log Workout' && <TrackWorkout />}
         {activeTab === 'Log Eating' && <TrackEating />}
-        {activeTab === 'AI Fitness Coach' && <AIFitnessCoach />}
+        {activeTab === 'AI Fitness Coach' }
+        {activeTab === 'AI Chef' && <AIFitnessCoach />}
       </main>
     </div>
   );

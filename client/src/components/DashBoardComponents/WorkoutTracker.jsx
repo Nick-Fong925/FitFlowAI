@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { selectActualUserID } from "../../selectors/userSelectors.js"
 
 const TrackWorkout = () => {
 
-  const actualUserID = 1;
+  const actualUserID = useSelector(selectActualUserID);
 
   const [workoutLogs, setWorkoutLogs] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -31,6 +33,9 @@ const TrackWorkout = () => {
     fetchWorkoutLogs();
   }, []); 
 
+  useEffect(() => {
+    console.log("actualUserID changed:", actualUserID);
+  }, [actualUserID]);
 
   const addWorkoutEntry = () => {
     // Check if the exercise is not an empty string before adding the entry
@@ -64,6 +69,7 @@ const TrackWorkout = () => {
   
   const SaveWorkoutLog = async () => {
     console.log(currentLog)
+    console.log("UserID:", actualUserID)
     try {
       await axios.post('http://localhost:8080/saveWorkoutLog', currentLog);
  
