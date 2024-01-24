@@ -112,6 +112,25 @@ const TrackEating = () => {
     }
   };
 
+  const deleteMealEntry = async (entryID) => {
+    console.log("entryID:", entryID);
+    try {
+      // Set headers for the request
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+  
+      // Make the DELETE request with the specified headers
+      await axios.delete(`http://localhost:8080/deleteMealEntry?entryID=${entryID}`, { headers });
+  
+      // After successful deletion, fetch updated workout logs
+      await fetchMealLogs();
+    } catch (error) {
+      console.error('Error deleting workout entry:', error);
+    }
+  };
+
+
   
   useEffect(() => {
     fetchMealLogs();
@@ -190,6 +209,7 @@ const TrackEating = () => {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 xl:grid-cols-5">
       {mealLogs.map((log) => (
         <div key={log.entryID} className="border-4 border-teal-600 bg-teal-50 rounded-xl p-4 max-w-xs font-semibold text-xs">
+            <button onClick={() => deleteMealEntry(log.entryID)} className="float-right text-red-500">Delete</button>
            <p className="mb-3 font-bold text-slate-500 text-m"> {formatDate(log.date)}</p>
           <ul>
             {log.items.map((item, index) => (

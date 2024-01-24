@@ -26,19 +26,19 @@ function Login() {
         const data = await response.json();
         console.log("Response from backend:", data);
         console.log("UserID:", data.userID);
+        console.log("UserName:", data.email);
 
 
         dispatch({ type: 'SET_USER_ID', payload: data.userID });
         console.log('Action dispatched:', { type: 'SET_USER_ID', payload: data.userID  });
+
+        dispatch({ type: 'SET_USER_NAME', payload: data.email });
+        console.log('Action dispatched:', { type: 'SET_USER_NAME', payload: data.email });
   
         // Log the updated Redux state to the console
         console.log("Updated Redux State:", store.getState());
   
         alert("Login successful!");
-        
-        
-
-  
         
       } else {
         const errorText = await response.text();

@@ -57,6 +57,25 @@ const TrackWorkout = () => {
     }
   };
 
+  const deleteWorkoutEntry = async (entryID) => {
+    console.log("entryID:", entryID);
+    try {
+      // Set headers for the request
+      const headers = {
+        'Content-Type': 'application/json',
+        // Add any other headers as needed
+      };
+  
+      // Make the DELETE request with the specified headers
+      await axios.delete(`http://localhost:8080/deleteWorkoutEntry?entryID=${entryID}`, { headers });
+  
+      // After successful deletion, fetch updated workout logs
+      await fetchWorkoutLogs();
+    } catch (error) {
+      console.error('Error deleting workout entry:', error);
+    }
+  };
+
   const fetchWorkoutLogs = async () => {
     try {
       // Replace actualUserID with the variable or state that holds the real user ID
@@ -176,17 +195,18 @@ const TrackWorkout = () => {
   <h2 className="text-xl font-bold mb-4">All Workout Logs</h2>
   {workoutLogs && workoutLogs.length > 0 ? (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-      {workoutLogs.map((log) => (
-        <div key={log.entryID} className="border-4 border-teal-600 bg-teal-50 rounded-xl p-4 max-w-xs font-semibold text-xs">
-          <ul>
-          <p className="mb-3 font-bold text-slate-500"> {formatDate(log.date)}</p>
-            {log.entries.map((entry, index) => (
-              <li key={index}>
-                <span className="font-bold">{entry.exercise}:</span> {entry.sets} sets | {entry.reps} reps | {entry.weight} lbs
-              </li>
-            ))}
-          </ul>
-        </div>
+     {workoutLogs.map((log) => (
+  <div key={log.entryID} className="border-4 border-teal-600 bg-teal-50 rounded-xl p-4 max-w-xs font-semibold text-xs">
+    <button onClick={() => deleteWorkoutEntry(log.entryID)} className="float-right text-red-500">Delete</button>
+    <ul>
+      <p className="mb-3 font-bold text-slate-500">{formatDate(log.date)}</p>
+      {log.entries.map((entry, index) => (
+        <li key={index}>
+          <span className="font-bold">{entry.exercise}:</span> {entry.sets} sets | {entry.reps} reps | {entry.weight} lbs
+        </li>
+      ))}
+    </ul>
+  </div>
       ))}
     </div>
   ) : (
