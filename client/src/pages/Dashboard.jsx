@@ -3,6 +3,7 @@ import Sidebar from '../components/DashBoardComponents/SideBar.jsx';
 import TrackWorkout from '../components/DashBoardComponents/WorkoutTracker.jsx';
 import TrackEating from '../components/DashBoardComponents/EatingTracker.jsx';
 import AIFitnessCoach from '../components/DashBoardComponents/AIFitnessCoach.jsx';
+import Analytics from '../components/DashBoardComponents/Analytics.jsx';
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('Log Workout');
@@ -19,6 +20,7 @@ function Dashboard() {
         {activeTab === 'Log Workout' && <TrackWorkout />}
         {activeTab === 'Log Eating' && <TrackEating />}
         {activeTab === 'AI Fitness Coach' }
+        {activeTab === 'Analytic Tools' && <Analytics />}
         {activeTab === 'AI Chef' && <AIFitnessCoach />}
       </main>
     </div>

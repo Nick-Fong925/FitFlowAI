@@ -60,16 +60,15 @@ const TrackWorkout = () => {
   const deleteWorkoutEntry = async (entryID) => {
     console.log("entryID:", entryID);
     try {
-      // Set headers for the request
+ 
       const headers = {
         'Content-Type': 'application/json',
-        // Add any other headers as needed
+     
       };
   
-      // Make the DELETE request with the specified headers
       await axios.delete(`http://localhost:8080/deleteWorkoutEntry?entryID=${entryID}`, { headers });
   
-      // After successful deletion, fetch updated workout logs
+  
       await fetchWorkoutLogs();
     } catch (error) {
       console.error('Error deleting workout entry:', error);
