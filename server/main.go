@@ -107,6 +107,7 @@ func main() {
 
 
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		registerHandler(w, r, db)
 	})
@@ -132,11 +133,22 @@ func main() {
 		getAllWorkoutLogsHandler(w, r, db)
 	})
 
+	mux.HandleFunc("/deleteWorkoutEntry", func(w http.ResponseWriter, r *http.Request) {
+		deleteWorkoutEntryHandler(w, r, db)
+	})
+
+	mux.HandleFunc("/deleteMealEntry", func(w http.ResponseWriter, r *http.Request) {
+		deleteMealEntryHandler(w, r, db)
+	})
 
 
-	handler := cors.Default().Handler(mux)
+	corsHandler := cors.New(cors.Options{
+    AllowedOrigins: []string{"*"}, // Allow all origins
+    AllowedMethods: []string{"GET", "POST", "DELETE", "OPTIONS"},
+    AllowedHeaders: []string{"*"},
+})
 
-	log.Fatal(http.ListenAndServe(":8080", handler))
+log.Fatal(http.ListenAndServe(":8080", corsHandler.Handler(mux)))
 }
 
 /** 
@@ -295,6 +307,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
         "status":  "success",
         "message": "Login successful",
         "userID":   user.UserID,
+		"email": user.Name,
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -398,6 +411,71 @@ func saveWorkoutLog(db *sql.DB, workoutLog WorkoutLog) (int, error) {
 }
 
 
+func deleteWorkoutEntryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+    // Handle CORS preflight request
+    if r.Method == http.MethodOptions {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "DELETE")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        w.WriteHeader(http.StatusOK)
+        return
+    }
+
+    // Handle unsupported methods
+    if r.Method != http.MethodDelete {
+        w.WriteHeader(http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Extract entryID from the URL query parameters
+    entryIDStr := r.URL.Query().Get("entryID")
+    entryID, err := strconv.Atoi(entryIDStr)
+    if err != nil {
+        http.Error(w, "Invalid entry ID", http.StatusBadRequest)
+        return
+    }
+
+    // Delete workout entry based on entry ID from the database
+    err = deleteWorkoutEntry(db, entryID)
+    if err != nil {
+        // Handle the error and respond with an error status
+        log.Println("Error deleting workout entry:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    // Respond with success status
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.WriteHeader(http.StatusOK)
+}
+
+// Function to delete workout entry from the database
+func deleteWorkoutEntry(db *sql.DB, entryID int) error {
+    // Implement your logic to delete the workout entry
+    // For example, you might use DELETE SQL statements
+
+    query1 := "DELETE FROM exerciseentry WHERE EntryID = $1"
+    query2 := "DELETE FROM WorkoutEntry WHERE EntryID = $1"
+
+    _, err1 := db.Exec(query1, entryID)
+    if err1 != nil {
+        // Handle the error, for example log it
+        log.Printf("Error deleting from exerciseentry: %v\n", err1)
+        return err1
+    }
+
+    _, err2 := db.Exec(query2, entryID)
+    if err2 != nil {
+        // Handle the error, for example log it
+        log.Printf("Error deleting from WorkoutEntry: %v\n", err2)
+        return err2
+    }
+
+    // Return a single error (nil if no errors occurred)
+    return nil
+}
+
+
 // Handler for saving eating log
 func saveEatingLogHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var eatingLog EatingLog
@@ -470,6 +548,71 @@ func saveEatingLog(db *sql.DB, eatingLog EatingLog) (int, error) {
 
 	return entryID, nil
 }
+
+
+func deleteMealEntryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+    if r.Method == http.MethodOptions {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "DELETE")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        w.WriteHeader(http.StatusOK)
+        return
+    }
+
+    // Handle unsupported methods
+    if r.Method != http.MethodDelete {
+        w.WriteHeader(http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Extract entryID from the URL query parameters
+    entryIDStr := r.URL.Query().Get("entryID")
+    entryID, err := strconv.Atoi(entryIDStr)
+    if err != nil {
+        http.Error(w, "Invalid entry ID", http.StatusBadRequest)
+        return
+    }
+
+    // Delete workout entry based on entry ID from the database
+    err = deleteMealEntry(db, entryID)
+    if err != nil {
+        // Handle the error and respond with an error status
+        log.Println("Error deleting meal entry:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    // Respond with success status
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.WriteHeader(http.StatusOK)
+}
+
+
+func  deleteMealEntry(db *sql.DB, entryID int) error {
+
+
+    query1 := "DELETE FROM fooditementry WHERE EntryID = $1"
+    query2 := "DELETE FROM eatingentry WHERE EntryID = $1"
+
+    _, err1 := db.Exec(query1, entryID)
+    if err1 != nil {
+        // Handle the error, for example log it
+        log.Printf("Error deleting from fooditementry: %v\n", err1)
+        return err1
+    }
+
+    _, err2 := db.Exec(query2, entryID)
+    if err2 != nil {
+        // Handle the error, for example log it
+        log.Printf("Error deleting from eatingentry : %v\n", err2)
+        return err2
+    }
+
+    // Return a single error (nil if no errors occurred)
+    return nil
+}
+
 
 
 func getAllMealLogsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
