@@ -4,6 +4,7 @@ import AICoachIcon from '../../assets/DashboardIcons/ai.png';
 import EatingLogIcon from '../../assets/DashboardIcons/salad.png';
 import WorkoutLogIcon from '../../assets/DashboardIcons/weightlifting.png';
 import Chef from "../../assets/DashboardIcons/chef-hat.png"
+import Data from '../../assets/DashboardIcons/data.png'
 
 const Sidebar = ({ activeTab, onTabChange }) => {
   const icons = {
@@ -11,13 +12,16 @@ const Sidebar = ({ activeTab, onTabChange }) => {
     'Log Eating': EatingLogIcon,
     'AI Chef': Chef,
     'AI Fitness Coach': AICoachIcon,
+    'Analytic Tools': Data,
   };
 
   const descriptions = {
     'Log Workout': 'Workout Log',
     'Log Eating': 'Meal Tracker',
+    'Analytic Tools': 'Analytics',
     'AI Chef': 'Recipe Creator',
-    'AI Fitness Coach': 'FitFlow Coach',
+    'AI Fitness Coach': 'FitFlow Coach'
+
   };
 
   const [isSidebarExpanded, setSidebarExpanded] = useState(false);
