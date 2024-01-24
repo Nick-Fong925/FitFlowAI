@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
+import { useDispatch, useStore} from 'react-redux';
+
 
 function Login() {
 
-
+  const dispatch = useDispatch();
+  const store = useStore();
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -20,8 +23,22 @@ function Login() {
       });
   
       if (response.ok) {
+        const data = await response.json();
+        console.log("Response from backend:", data);
+        console.log("UserID:", data.userID);
+
+
+        dispatch({ type: 'SET_USER_ID', payload: data.userID });
+        console.log('Action dispatched:', { type: 'SET_USER_ID', payload: data.userID  });
+  
+        // Log the updated Redux state to the console
+        console.log("Updated Redux State:", store.getState());
+  
         alert("Login successful!");
-        window.location.href = "/Dashboard";
+        
+        
+
+  
         
       } else {
         const errorText = await response.text();

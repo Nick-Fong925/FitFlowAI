@@ -282,14 +282,23 @@ func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
         return
     }
 
-    _, err := loginUser(db, loginData.Email, loginData.Password)
+    user, err := loginUser(db, loginData.Email, loginData.Password)
     if err != nil {
         http.Error(w, err.Error(), http.StatusUnauthorized)
         return
     }
 
-    // Send a success response
-    w.WriteHeader(http.StatusOK)
+	fmt.Printf("User %s logged in. UserID: %d\n", user.Name, user.UserID)
+
+    // Send the UserID in the response upon successful login
+    jsonResponse := map[string]interface{}{
+        "status":  "success",
+        "message": "Login successful",
+        "userID":   user.UserID,
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(jsonResponse)
 }
 
 /** 

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { selectActualUserID } from "../../selectors/userSelectors.js"
 
 const TrackEating = () => {
 
-  const actualUserID = 4;
+  const actualUserID = useSelector(selectActualUserID);
 
   const [mealLogs, setMealLogs] = useState([]);
 
