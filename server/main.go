@@ -33,6 +33,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	"strconv"
+	"math/rand"
+	"time"
 )
 
 type User struct {
@@ -117,6 +119,8 @@ func main() {
 	createExcerciseEntryTable(db)
 	createEatingEntryTable(db)
 	createFoodItemEntryTable(db)
+	populateSampleData(db)
+	populateWorkoutSampleData(db)
 
 
 	mux := http.NewServeMux()
@@ -163,12 +167,54 @@ func main() {
 	})
 
 	corsHandler := cors.New(cors.Options{
-    AllowedOrigins: []string{"*"}, // Allow all origins
+    AllowedOrigins: []string{"*"}, 
     AllowedMethods: []string{"GET", "POST", "DELETE", "OPTIONS"},
     AllowedHeaders: []string{"*"},
 })
 
 log.Fatal(http.ListenAndServe(":8080", corsHandler.Handler(mux)))
+}
+
+func populateSampleData(db *sql.DB) {
+	
+	eatingEntryQuery := `
+	INSERT INTO EatingEntry (UserID, Date)
+	VALUES ($1, $2)
+	RETURNING EntryID
+	`
+
+
+	foodItemEntryQuery := `
+	INSERT INTO FoodItemEntry (EntryID, Food, Quantity, Calories)
+	VALUES ($1, $2, $3, $4)
+	`
+
+	userID := 1
+
+
+	for i := 0; i < 7; i++ {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+
+		var entryID int
+		err := db.QueryRow(eatingEntryQuery, userID, date).Scan(&entryID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+
+		foodItems := []string{"Sample Food 1", "Sample Food 2", "Sample Food 3"}
+		for _, food := range foodItems {
+			quantity := rand.Intn(5) + 1
+			calories := rand.Intn(500) + 100 
+
+			_, err := db.Exec(foodItemEntryQuery, entryID, food, quantity, calories)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		log.Printf("Data inserted for UserID %d on %s\n", userID, date)
+	}
 }
 
 /** 
@@ -254,6 +300,51 @@ func createFoodItemEntryTable(db *sql.DB) {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func populateWorkoutSampleData(db *sql.DB) {
+	exerciseEntryQuery := `
+	INSERT INTO ExerciseEntry (EntryID, ExerciseName, Sets, Reps, Weight)
+	VALUES ($1, $2, $3, $4, $5)
+	`
+
+	workoutEntryQuery := `
+	INSERT INTO WorkoutEntry (UserID, Date)
+	VALUES ($1, $2)
+	RETURNING EntryID
+	`
+
+	userID := 1
+
+	for i := 0; i < 7; i++ {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+
+		var entryID int
+		err := db.QueryRow(workoutEntryQuery, userID, date).Scan(&entryID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		exercises := []struct {
+			Name   string
+			Sets   int
+			Reps   int
+			Weight int
+		}{
+			{"Exercise 1", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+			{"Exercise 2", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+			{"Exercise 3", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+		}
+
+		for _, exercise := range exercises {
+			_, err := db.Exec(exerciseEntryQuery, entryID, exercise.Name, exercise.Sets, exercise.Reps, exercise.Weight)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		log.Printf("Workout data inserted for UserID %d on %s\n", userID, date)
 	}
 }
 
@@ -705,7 +796,6 @@ func getMealAnalytics(db *sql.DB, userID int) ([]MealAnalyticsResponse, error) {
 			}
 
 			mealLogs = append(mealLogs, mealLog)
-			fmt.Printf("Backend Meal Log: %+v\n", mealLog)
 		}
 
 		if err := rows.Err(); err != nil {
