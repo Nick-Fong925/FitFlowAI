@@ -33,6 +33,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	"strconv"
+	"math/rand"
+	"time"
 )
 
 type User struct {
@@ -87,6 +89,19 @@ type MealLogResponse struct {
 	} `json:"items"`
 }
 
+type MealAnalyticsResponse struct {
+	Date     string  `json:"date"`
+    Calories float64 `json:"calories"`
+    Quantity float64 `json:"quantity"`
+}
+
+type WorkoutAnalyticsResponse struct {
+	Date     string  `json:"date"`
+    Sets float64 `json:"sets"`
+    Reps float64 `json:"reps"`
+	Weight float64 `json:"weight"`
+}
+
 func main() {
 	connStr := "postgres://postgres:19701120@localhost:5432/FitFlowAI?sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
@@ -104,6 +119,8 @@ func main() {
 	createExcerciseEntryTable(db)
 	createEatingEntryTable(db)
 	createFoodItemEntryTable(db)
+	populateSampleData(db)
+	populateWorkoutSampleData(db)
 
 
 	mux := http.NewServeMux()
@@ -141,14 +158,63 @@ func main() {
 		deleteMealEntryHandler(w, r, db)
 	})
 
+	mux.HandleFunc("/getMealAnalytics", func(w http.ResponseWriter, r *http.Request) {
+		getMealAnalyticsHandler(w, r, db)
+	})
+
+	mux.HandleFunc("/getWorkoutAnalytics", func(w http.ResponseWriter, r *http.Request) {
+		getWorkoutAnalyticsHandler(w, r, db)
+	})
 
 	corsHandler := cors.New(cors.Options{
-    AllowedOrigins: []string{"*"}, // Allow all origins
+    AllowedOrigins: []string{"*"}, 
     AllowedMethods: []string{"GET", "POST", "DELETE", "OPTIONS"},
     AllowedHeaders: []string{"*"},
 })
 
 log.Fatal(http.ListenAndServe(":8080", corsHandler.Handler(mux)))
+}
+
+func populateSampleData(db *sql.DB) {
+	
+	eatingEntryQuery := `
+	INSERT INTO EatingEntry (UserID, Date)
+	VALUES ($1, $2)
+	RETURNING EntryID
+	`
+
+
+	foodItemEntryQuery := `
+	INSERT INTO FoodItemEntry (EntryID, Food, Quantity, Calories)
+	VALUES ($1, $2, $3, $4)
+	`
+
+	userID := 1
+
+
+	for i := 0; i < 7; i++ {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+
+		var entryID int
+		err := db.QueryRow(eatingEntryQuery, userID, date).Scan(&entryID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+
+		foodItems := []string{"Sample Food 1", "Sample Food 2", "Sample Food 3"}
+		for _, food := range foodItems {
+			quantity := rand.Intn(5) + 1
+			calories := rand.Intn(500) + 100 
+
+			_, err := db.Exec(foodItemEntryQuery, entryID, food, quantity, calories)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		log.Printf("Data inserted for UserID %d on %s\n", userID, date)
+	}
 }
 
 /** 
@@ -234,6 +300,51 @@ func createFoodItemEntryTable(db *sql.DB) {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func populateWorkoutSampleData(db *sql.DB) {
+	exerciseEntryQuery := `
+	INSERT INTO ExerciseEntry (EntryID, ExerciseName, Sets, Reps, Weight)
+	VALUES ($1, $2, $3, $4, $5)
+	`
+
+	workoutEntryQuery := `
+	INSERT INTO WorkoutEntry (UserID, Date)
+	VALUES ($1, $2)
+	RETURNING EntryID
+	`
+
+	userID := 1
+
+	for i := 0; i < 7; i++ {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+
+		var entryID int
+		err := db.QueryRow(workoutEntryQuery, userID, date).Scan(&entryID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		exercises := []struct {
+			Name   string
+			Sets   int
+			Reps   int
+			Weight int
+		}{
+			{"Exercise 1", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+			{"Exercise 2", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+			{"Exercise 3", rand.Intn(5) + 1, rand.Intn(12) + 1, rand.Intn(50) + 10},
+		}
+
+		for _, exercise := range exercises {
+			_, err := db.Exec(exerciseEntryQuery, entryID, exercise.Name, exercise.Sets, exercise.Reps, exercise.Weight)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		log.Printf("Workout data inserted for UserID %d on %s\n", userID, date)
 	}
 }
 
@@ -636,6 +747,125 @@ func getAllMealLogsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(mealLogs)
 }
+
+func getMealAnalyticsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    mealLogs, err := getMealAnalytics(db, userID)
+    if err != nil {
+        log.Println("Error fetching meal logs:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(mealLogs)
+}
+
+
+func getMealAnalytics(db *sql.DB, userID int) ([]MealAnalyticsResponse, error) {
+			query := `
+			SELECT e.Date, 
+				COALESCE(fi.Calories, 0) as Calories,
+				COALESCE(fi.Quantity, 0) as Quantity
+			FROM EatingEntry e
+			LEFT JOIN FoodItemEntry fi ON e.EntryID = fi.EntryID
+			WHERE e.UserID = $1
+			ORDER BY e.Date DESC
+		`
+
+		rows, err := db.Query(query, userID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var mealLogs []MealAnalyticsResponse
+
+		for rows.Next() {
+			var mealLog MealAnalyticsResponse
+
+			if err := rows.Scan(&mealLog.Date, &mealLog.Calories, &mealLog.Quantity); err != nil {
+				return nil, err
+			}
+
+			mealLogs = append(mealLogs, mealLog)
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		return mealLogs, nil
+}
+
+
+
+func getWorkoutAnalyticsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	userIDStr := r.URL.Query().Get("userID")
+
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    workoutLogs, err := getWorkoutAnalytics(db, userID)
+    if err != nil {
+        log.Println("Error fetching workout logs:", err)
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(workoutLogs)
+}
+
+
+func getWorkoutAnalytics(db *sql.DB, userID int) ([]WorkoutAnalyticsResponse, error) {
+			query := `
+			SELECT w.Date, 
+				COALESCE(ee.Sets, 0) as Sets,
+				COALESCE(ee.Reps, 0) as Reps,
+				COALESCE(ee.Weight, 0) as Weight
+			FROM WorkoutEntry w
+			LEFT JOIN ExerciseEntry ee ON w.EntryID = ee.EntryID
+			WHERE w.UserID = $1
+			ORDER BY w.Date DESC
+		`
+
+		rows, err := db.Query(query, userID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var workoutLogs []WorkoutAnalyticsResponse
+
+		for rows.Next() {
+			var workoutLog WorkoutAnalyticsResponse
+
+			if err := rows.Scan(&workoutLog.Date, &workoutLog.Sets, &workoutLog.Reps, &workoutLog.Weight); err != nil {
+				return nil, err
+			}
+
+			workoutLogs = append(workoutLogs, workoutLog )
+			fmt.Printf("Backend Workout Log: %+v\n", workoutLog )
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		return workoutLogs, nil
+}
+
 
 // Function to fetch all meal logs from the database
 func getAllMealLogs(db *sql.DB, userID int) ([]MealLogResponse, error) {

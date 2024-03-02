@@ -11,7 +11,7 @@ const RecipeGenerator = () => {
   const [targetCalorieToggle, setTargetCaloriesToggle] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState([]);
 
-  const openaiApiKey = "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";
+  const openaiApiKey = "";
   const apiUrl = "https://api.openai.com/v1/chat/completions";
   const model = "gpt-3.5-turbo";
   const temperature = 0.7;

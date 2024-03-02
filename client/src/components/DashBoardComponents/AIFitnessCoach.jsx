@@ -11,21 +11,24 @@ const ChatGPTComponent = () => {
   const [targetCalorieToggle, setTargetCaloriesToggle] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState([]);
 
-  const openaiApiKey = "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";
+  const openaiApiKey = "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";
   const apiUrl = "https://api.openai.com/v1/chat/completions";
   const model = "gpt-3.5-turbo";
   const temperature = 0.7;
   const maxTokens = 2000;
 
   const handleCalorieChange = (e) => {
+    // change local calorie value
     setCalories(e.target.value);
   };
 
   const handleNewIngredientChange = (e) => {
+    // handle new ingredient change
     setNewIngredient(e.target.value);
   };
 
   const handleAddIngredient = () => {
+    // handle adding a new ingredient
     if (newIngredient.trim()) {
       setIngredients([...ingredients, newIngredient]);
       setNewIngredient('');
@@ -33,10 +36,12 @@ const ChatGPTComponent = () => {
   };
 
   const handleNewDietaryRestrictionChange = (e) => {
+    // handle dietary restriction change
     setNewDietaryRestriction(e.target.value);
   };
 
   const handleAddDietaryRestriction = () => {
+    // adds a new dietary restriction onto the current list of dietary restrictions
     if (newDietaryRestriction.trim()) {
       setDietaryRestrictions([...dietaryrestrictions, newDietaryRestriction]);
       setNewDietaryRestriction('');
@@ -44,6 +49,7 @@ const ChatGPTComponent = () => {
   };
 
   const deleteIngredient = (ingredientToDelete) => {
+    // deletes the ingredient 
     const updatedIngredients = ingredients.filter(ingredient => ingredient !== ingredientToDelete);
     setIngredients(updatedIngredients);
   };
