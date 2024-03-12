@@ -3,19 +3,23 @@ import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from 'react-redux';
 import { selectActualUserName } from "../selectors/nameSelector";
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Header() {
   const userName = useSelector(selectActualUserName);
   const dispatch = useDispatch();
-
+  const navigate = useNavigate();
   useEffect(() => {
     dispatch({ type: 'SET_DISPLAYED_NAME', payload: userName || 'Login' });
   }, [dispatch, userName]);
 
   const handleLogout = () => {
-    dispatch({ type: 'CLEAR_USER_ID' });
-    dispatch({ type: 'CLEAR_USER_NAME' });
-    dispatch({ type: 'SET_DISPLAYED_NAME', payload: 'Login' });
+        // redux state changed using user_ID
+        dispatch({ type: 'SET_USER_ID', payload: null });
+
+        // redux state changed using user_Name
+        dispatch({ type: 'SET_USER_NAME', payload: null });
+        navigate('/');
   };
 
   return (
@@ -37,7 +41,7 @@ function Header() {
               ) : (
                 <Link
                   className="text-black font-bold hover:text-gray-200 md:text-s login-style"
-                  to="/login"
+                  to="/Login"
                 >
                   <span className="text-black font-bold hover:text-gray-200 text-s">
                     {userName || 'Login'}

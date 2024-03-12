@@ -76,20 +76,25 @@ const ChatGPTComponent = () => {
   };
 
   const parseAPIResponse = (content) => {
+    // parse the Chat GPT responses by splitting it up into an array
     const sections = content.split('\n\n');
   
+    // find the ingredients: 
     const ingredientsSection = sections.find((section) =>
       section.toLowerCase().includes('ingredients:')
     );
   
+    // find the instructions: 
     const instructionsSection = sections.find((section) =>
       section.toLowerCase().includes('instructions:')
     );
   
+    // Process ingredients information
     const ingredients = ingredientsSection
       ? ingredientsSection.replace('Ingredients:', '').trim().split('\n')
       : [];
   
+    // Process instructions information
     const instructions = instructionsSection
       ? instructionsSection.replace('Instructions:', '').trim().split('\n')
       : [];

@@ -25,6 +25,7 @@ function Register() {
 				body: JSON.stringify({ email, password }),
 			});
 
+			// set feilds back to default after
 			if (response.ok) {
 				alert("Registration successful!");
 				event.target.email.value = "";

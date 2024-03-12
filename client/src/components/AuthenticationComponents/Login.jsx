@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { useDispatch, useStore} from 'react-redux';
+import { useDispatch} from 'react-redux';
+import { useNavigate } from "react-router-dom";
 
 
 function Login() {
 
   const dispatch = useDispatch();
-  const store = useStore();
+  const navigate = useNavigate();
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -14,33 +15,28 @@ function Login() {
     const password = event.target.password.value;
   
     try {
+      // fetch userID and name with email, and password
       const response = await fetch("http://localhost:8080/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        // body data that is being sent
         body: JSON.stringify({ email, password }),
       });
   
       if (response.ok) {
         const data = await response.json();
-        console.log("Response from backend:", data);
-        console.log("UserID:", data.userID);
-        console.log("UserName:", data.email);
 
-
+        // redux state changed using user_ID
         dispatch({ type: 'SET_USER_ID', payload: data.userID });
-        console.log('Action dispatched:', { type: 'SET_USER_ID', payload: data.userID  });
 
+        // redux state changed using user_Name
         dispatch({ type: 'SET_USER_NAME', payload: data.email });
-        console.log('Action dispatched:', { type: 'SET_USER_NAME', payload: data.email });
-  
-        // Log the updated Redux state to the console
-        console.log("Updated Redux State:", store.getState());
-  
-        alert("Login successful!");
+        navigate('/Dashboard');
         
       } else {
+        // catch error
         const errorText = await response.text();
         alert(`Login failed: ${errorText}`);
       }
@@ -52,6 +48,7 @@ function Login() {
   
 
   return (
+  
     <div className="flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg md:shadow-md w-96">
         <h2 className="text-2xl font-semibold mb-4">Login</h2>
